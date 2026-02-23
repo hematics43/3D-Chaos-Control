@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Advanced Lorenz Chaos UI</title>
+<style>
+
+body{
+    margin:0;
+    background: radial-gradient(circle at center, #020210, #000);
+    overflow:hidden;
+    font-family:Arial;
+    color:white;
+}
+
+canvas{
+    display:block;
+}
+
+.panel{
+    position:absolute;
+    top:20px;
+    left:20px;
+    padding:15px;
+    border-radius:15px;
+    background:rgba(0,0,0,0.3);
+    backdrop-filter:blur(15px);
+    box-shadow:0 0 30px cyan;
+}
+
+input{
+    width:60px;
+}
+
+button{
+    margin-top:8px;
+    padding:8px;
+    border:none;
+    border-radius:8px;
+    background:linear-gradient(45deg,cyan,magenta);
+    cursor:pointer;
+}
+
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div class="panel">
+<h3>3D Chaos Control</h3>
+σ <input id="sigma" value="10"><br>
+ρ <input id="rho" value="28"><br>
+β <input id="beta" value="2.667"><br>
+<button onclick="reset()">Reset Chaos</button>
+</div>
+
+<script>
+
+const canvas=document.getElementById("canvas");
+const ctx=canvas.getContext("2d");
+
+canvas.width=window.innerWidth;
+canvas.height=window.innerHeight;
+
+let sigma=10,rho=28,beta=2.667;
+
+let x=0.1,y=0,z=0;
+let points=[];
+
+let scale=8;
+let angleX=0;
+let angleY=0;
+
+let mouseDown=false;
+let lastX,lastY;
+
+const dt=0.01;
+const maxPoints=8000;
+
+canvas.onmousedown=e=>{
+    mouseDown=true;
+    lastX=e.clientX;
+    lastY=e.clientY;
+};
+
+canvas.onmouseup=e=>{
+    mouseDown=false;
+};
+
+canvas.onmousemove=e=>{
+
+    if(mouseDown){
+
+        angleY+=(e.clientX-lastX)*0.005;
+        angleX+=(e.clientY-lastY)*0.005;
+
+        lastX=e.clientX;
+        lastY=e.clientY;
+    }
+};
+
+canvas.onwheel=e=>{
+    scale+=e.deltaY*-0.01;
+    scale=Math.max(2,Math.min(50,scale));
+};
+
+function lorenz(){
+
+    let dx=sigma*(y-x);
+    let dy=x*(rho-z)-y;
+    let dz=x*y-beta*z;
+
+    x+=dx*dt;
+    y+=dy*dt;
+    z+=dz*dt;
+
+    points.push({x,y,z});
+
+    if(points.length>maxPoints)
+        points.shift();
+}
+
+function rotate3D(px,py,pz){
+
+    let cosY=Math.cos(angleY);
+    let sinY=Math.sin(angleY);
+
+    let cosX=Math.cos(angleX);
+    let sinX=Math.sin(angleX);
+
+    let dx=cosY*px - sinY*pz;
+    let dz=sinY*px + cosY*pz;
+
+    let dy=cosX*py - sinX*dz;
+    dz=sinX*py + cosX*dz;
+
+    return {x:dx,y:dy,z:dz};
+}
+
+function draw(){
+
+    ctx.fillStyle="rgba(0,0,0,0.08)";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    ctx.save();
+    ctx.translate(canvas.width/2,canvas.height/2);
+
+    ctx.shadowBlur=15;
+
+    for(let i=0;i<points.length;i++){
+
+        let p=rotate3D(points[i].x,points[i].y,points[i].z);
+
+        let px=p.x*scale;
+        let py=p.y*scale;
+
+        let hue=i/points.length*360;
+
+        ctx.fillStyle=`hsl(${hue},100%,60%)`;
+        ctx.shadowColor=`hsl(${hue},100%,60%)`;
+
+        ctx.fillRect(px,py,2,2);
+    }
+
+    ctx.restore();
+}
+
+function animate(){
+
+    lorenz();
+
+    angleY+=0.002;
+
+    draw();
+
+    requestAnimationFrame(animate);
+}
+
+function reset(){
+
+    sigma=parseFloat(document.getElementById("sigma").value);
+    rho=parseFloat(document.getElementById("rho").value);
+    beta=parseFloat(document.getElementById("beta").value);
+
+    x=0.1;y=0;z=0;
+    points=[];
+}
+
+animate();
+
+window.onresize=()=>{
+    canvas.width=window.innerWidth;
+    canvas.height=window.innerHeight;
+};
+
+</script>
+
+</body>
+</html>
